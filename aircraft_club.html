@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroClub — Fleet Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d47;
+    --amber: #f59e0b;
+    --amber-dim: #b45309;
+    --amber-glow: rgba(245,158,11,0.12);
+    --sky: #38bdf8;
+    --sky-dim: #0369a1;
+    --green: #34d399;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --mono: 'Share Tech Mono', monospace;
+    --head: 'Barlow Condensed', sans-serif;
+    --body: 'Barlow', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID NOISE BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: rgba(11,15,26,0.92);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 32px;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-logo {
+    font-family: var(--head);
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 4px;
+    color: var(--amber);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-logo .plane-icon {
+    font-size: 18px;
+    transform: rotate(-35deg);
+    display: inline-block;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+    margin-left: 12px;
+  }
+
+  .nav-links button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--head);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .nav-links button:hover, .nav-links button.active {
+    color: var(--amber);
+    background: var(--amber-glow);
+  }
+
+  .nav-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .tail-badge {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--sky);
+    background: rgba(56,189,248,0.1);
+    border: 1px solid rgba(56,189,248,0.25);
+    padding: 4px 12px;
+    border-radius: 4px;
+    letter-spacing: 2px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* LAYOUT */
+  .app { position: relative; z-index: 1; }
+  .page { display: none; padding-top: 56px; min-height: 100vh; }
+  .page.active { display: block; }
+
+  /* DASHBOARD */
+  .hero {
+    padding: 48px 32px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(245,158,11,0.05) 0%, transparent 100%);
+  }
+
+  .hero-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .hero-title {
+    font-family: var(--head);
+    font-size: 56px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+
+  .hero-title span { color: var(--amber); }
+
+  .hero-sub {
+    margin-top: 12px;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  /* STAT CARDS */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-card {
+    padding: 24px 28px;
+    border-right: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card:last-child { border-right: none; }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--amber);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .stat-card:hover::before { opacity: 1; }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: var(--head);
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.sky { color: var(--sky); }
+  .stat-value.green { color: var(--green); }
+
+  .stat-unit {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* MAIN CONTENT GRID */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 0;
+    min-height: calc(100vh - 250px);
+  }
+
+  .main-col {
+    border-right: 1px solid var(--border);
+    padding: 28px;
+  }
+
+  .side-col {
+    padding: 28px;
+  }
+
+  /* SECTION HEADERS */
+  .section-title {
+    font-family: var(--head);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* AIRCRAFT CARD */
+  .aircraft-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    transition: border-color 0.2s;
+  }
+
+  .aircraft-card:hover { border-color: var(--amber-dim); }
+
+  .aircraft-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .aircraft-tail {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sky);
+    letter-spacing: 3px;
+  }
+
+  .aircraft-type {
+    font-family: var(--head);
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .status-badge.airworthy {
+    background: rgba(52,211,153,0.1);
+    border: 1px solid rgba(52,211,153,0.25);
+    color: var(--green);
+  }
+
+  .status-badge.maintenance {
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--amber);
+  }
+
+  .status-badge.grounded {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.25);
+    color: var(--red);
+  }
+
+  .aircraft-specs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+
+  .spec-item {
+    padding: 14px 20px;
+    border-right: 1px solid var(--border);
+  }
+
+  .spec-item:last-child { border-right: none; }
+
+  .spec-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .spec-val {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  /* SCHEDULE / CALENDAR */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+
+  .cal-header {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    padding: 8px 4px;
+    letter-spacing: 1px;
+  }
+
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    position: relative;
+    background: var(--surface);
+  }
+
+  .cal-day:hover:not(.empty) {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: var(--amber-glow);
+  }
+
+  .cal-day.today {
+    border-color: var(--sky);
+    color: var(--sky);
+    font-weight: 700;
+  }
+
+  .cal-day.has-event::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  .cal-day.has-maint::after {
+    background: var(--red);
+  }
+
+  .cal-day.selected {
+    background: var(--amber-glow);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  .cal-day.empty { background: none; border-color: transparent; cursor: default; }
+  .cal-day.past { opacity: 0.35; }
+
+  /* MAINTENANCE LIST */
+  .maint-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .maint-item:last-child { border-bottom: none; }
+
+  .maint-date-block {
+    min-width: 44px;
+    text-align: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 4px;
+  }
+
+  .maint-month {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .maint-day {
+    font-family: var(--head);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--amber);
+    line-height: 1;
+  }
+
+  .maint-info { flex: 1; }
+
+  .maint-type {
+    font-family: var(--head);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .maint-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .maint-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .btn-icon {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+
+  .btn-icon:hover { border-color: var(--red); color: var(--red); }
+  .btn-icon.edit:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* BUTTONS */
+  .btn-primary {
+    background: var(--amber);
+    color: #000;
+    border: none;
+    font-family: var(--head);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary:hover {
+    background: #fbbf24;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+  }
+
+  .btn-secondary {
+    background: none;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-family: var(--head);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(7,10,18,0.85);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 520px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border-radius: 12px 12px 0 0;
+  }
+
+  .modal-title {
+    font-family: var(--head);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  .modal-body { padding: 24px; }
+
+  /* FORM STYLES */
+  .form-group { margin-bottom: 18px; }
+
+  .form-label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 2px var(--amber-glow);
+  }
+
+  .form-textarea { resize: vertical; min-height: 80px; }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .form-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 12px 20px;
+    border-radius: 6px;
+    z-index: 300;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+  }
+
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .toast.error {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* SQUAWK TABLE */
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(30,45,71,0.5);
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .table tr:hover td { background: var(--surface2); }
+
+  .priority-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .priority-high { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .priority-med { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .priority-low { background: var(--sky); box-shadow: 0 0 6px var(--sky); }
+
+  /* LOGBOOK */
+  .log-entry {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-entry:last-child { border-bottom: none; }
+
+  .log-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .log-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .log-tech {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    background: var(--amber-glow);
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  /* HUD-style decorations */
+  .hud-corner {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-color: var(--amber);
+    border-style: solid;
+    opacity: 0.4;
+  }
+
+  .hud-tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .hud-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .hud-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+  .hud-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+  /* MONTH NAV */
+  .month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .month-label {
+    font-family: var(--head);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .month-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+
+  .month-btn:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-size: 13px; }
+
+  /* CHIPS */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .chip-amber { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .chip-sky { background: rgba(56,189,248,0.1); color: var(--sky); border: 1px solid rgba(56,189,248,0.2); }
+  .chip-green { background: rgba(52,211,153,0.1); color: var(--green); border: 1px solid rgba(52,211,153,0.2); }
+  .chip-red { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+
+  /* SELECT OPTION */
+  option { background: var(--surface); }
+
+  @media (max-width: 768px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .content-grid { grid-template-columns: 1fr; }
+    .main-col { border-right: none; }
+    .aircraft-specs { grid-template-columns: repeat(2, 1fr); }
+    .hero-title { font-size: 36px; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <span class="plane-icon">✈</span>
+    AeroClub
+  </div>
+  <ul class="nav-links">
+    <li><button onclick="showPage('dashboard')" class="active" id="nav-dashboard">Dashboard</button></li>
+    <li><button onclick="showPage('schedule')" id="nav-schedule">Schedule</button></li>
+    <li><button onclick="showPage('maintenance')" id="nav-maintenance">Maintenance</button></li>
+    <li><button onclick="showPage('logbook')" id="nav-logbook">Logbook</button></li>
+  </ul>
+  <div class="nav-right">
+    <div class="tail-badge">N1234</div>
+    <div class="status-dot" title="Aircraft Airworthy"></div>
+  </div>
+</nav>
+
+<div class="app">
+
+  <!-- ======================== DASHBOARD ======================== -->
+  <div class="page active" id="page-dashboard">
+    <div class="hero">
+      <div class="hero-label">// Fleet Status — KPHX</div>
+      <h1 class="hero-title">Aircraft <span>Management</span></h1>
+      <p class="hero-sub">Cessna 172S Skyhawk · Registration N1234 · Phoenix, AZ</p>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Total Hours</div>
+        <div class="stat-value amber" id="stat-hours">2,847</div>
+        <div class="stat-unit">TACH HRS</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Next 100-Hr</div>
+        <div class="stat-value sky" id="stat-100hr">53</div>
+        <div class="stat-unit">HRS REMAINING</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Annual Due</div>
+        <div class="stat-value green" id="stat-annual">Sep 2025</div>
+        <div class="stat-unit">EXPIRATION</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open Squawks</div>
+        <div class="stat-value" id="stat-squawks">2</div>
+        <div class="stat-unit">ITEMS</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="main-col">
+        <!-- AIRCRAFT CARD -->
+        <div class="section-title">Aircraft</div>
+        <div class="aircraft-card" style="position:relative">
+          <div class="hud-corner hud-tl"></div>
+          <div class="hud-corner hud-tr"></div>
+          <div class="hud-corner hud-bl"></div>
+          <div class="hud-corner hud-br"></div>
+          <div class="aircraft-card-header">
+            <div>
+              <div class="aircraft-tail">N1234</div>
+              <div class="aircraft-type">Cessna 172S Skyhawk SP</div>
+            </div>
+            <div class="status-badge airworthy">
+              <span>●</span> Airworthy
+            </div>
+          </div>
+          <div class="aircraft-specs">
+            <div class="spec-item">
+              <div class="spec-label">Engine</div>
+              <div class="spec-val">Lycoming IO-360-L2A</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-label">Horsepower</div>
+              <div class="spec-val">180 HP</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-label">Fuel</div>
+              <div class="spec-val">100LL · 53 GAL</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-label">Year</div>
+              <div class="spec-val">2018</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-label">Avionics</div>
+              <div class="spec-val">G1000 NXi</div>
+            </div>
+            <div class="spec-item">
+              <div class="spec-label">Base Airport</div>
+              <div class="spec-val">KPHX</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SQUAWKS -->
+        <div class="section-title">Open Squawks</div>
+        <table class="table" id="squawk-table">
+          <thead>
+            <tr>
+              <th>Priority</th>
+              <th>Description</th>
+              <th>Reported</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="squawk-body">
+            <tr>
+              <td><span class="priority-dot priority-med"></span>Medium</td>
+              <td>Left landing light intermittent</td>
+              <td>Mar 22</td>
+              <td><span class="chip chip-amber">Scheduled</span></td>
+            </tr>
+            <tr>
+              <td><span class="priority-dot priority-low"></span>Low</td>
+              <td>Cabin door seal worn — slight draft</td>
+              <td>Mar 18</td>
+              <td><span class="chip chip-sky">Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top: 14px;">
+          <button class="btn-primary" onclick="openSquawkModal()">+ Add Squawk</button>
+        </div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="side-col">
+        <div class="section-title">Upcoming</div>
+        <div id="sidebar-upcoming"></div>
+
+        <div style="margin-top: 28px;">
+          <div class="section-title">Quick Actions</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button class="btn-primary" onclick="showPage('maintenance'); openMaintModal()" style="width:100%; justify-content:center;">
+              ✦ Schedule Maintenance
+            </button>
+            <button class="btn-secondary" onclick="showPage('schedule')" style="width:100%; text-align:center;">
+              View Full Calendar
+            </button>
+            <button class="btn-secondary" onclick="showPage('logbook')" style="width:100%; text-align:center;">
+              View Logbook
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top: 28px;">
+          <div class="section-title">Airworthiness</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-size:12px; color: var(--text-muted);">Annual Inspection</span>
+              <span class="chip chip-green">Current</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-size:12px; color: var(--text-muted);">100-Hr Inspection</span>
+              <span class="chip chip-sky">53 hrs out</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-size:12px; color: var(--text-muted);">ELT Battery</span>
+              <span class="chip chip-green">Jan 2026</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 0;">
+              <span style="font-size:12px; color: var(--text-muted);">VOR Check</span>
+              <span class="chip chip-amber">Due Apr 5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== SCHEDULE ======================== -->
+  <div class="page" id="page-schedule">
+    <div class="hero">
+      <div class="hero-label">// Reservation Calendar</div>
+      <h1 class="hero-title">Schedule <span>& Reservations</span></h1>
+      <p class="hero-sub">View, create, and manage maintenance and flight reservations for N1234</p>
+    </div>
+
+    <div class="content-grid">
+      <div class="main-col">
+        <div class="month-nav">
+          <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+          <div class="month-label" id="cal-month-label"></div>
+          <button class="month-btn" onclick="changeMonth(1)">›</button>
+        </div>
+
+        <div class="calendar-grid" id="cal-grid">
+          <!-- populated by JS -->
+        </div>
+
+        <div style="display:flex; gap:16px; margin-top:8px;">
+          <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); font-family:var(--mono);">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);display:inline-block;"></span> Maintenance
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); font-family:var(--mono);">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--sky);display:inline-block;"></span> Today
+          </div>
+        </div>
+      </div>
+
+      <div class="side-col">
+        <div class="section-title">Day Detail</div>
+        <div id="day-detail">
+          <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <p>Select a date to view or add reservations</p>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <button class="btn-primary" onclick="openMaintModal()" style="width:100%; justify-content:center;">
+            + New Maintenance Reservation
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== MAINTENANCE ======================== -->
+  <div class="page" id="page-maintenance">
+    <div class="hero">
+      <div class="hero-label">// Maintenance Tracking</div>
+      <h1 class="hero-title">Maintenance <span>Reservations</span></h1>
+      <p class="hero-sub">Schedule and track all maintenance events for N1234</p>
+    </div>
+
+    <div style="padding: 28px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+        <div class="section-title" style="margin-bottom:0; flex:1;">All Maintenance</div>
+        <button class="btn-primary" onclick="openMaintModal()">+ Schedule Maintenance</button>
+      </div>
+      <div id="maint-list"></div>
+    </div>
+  </div>
+
+  <!-- ======================== LOGBOOK ======================== -->
+  <div class="page" id="page-logbook">
+    <div class="hero">
+      <div class="hero-label">// Maintenance Records</div>
+      <h1 class="hero-title">Maintenance <span>Logbook</span></h1>
+      <p class="hero-sub">Complete maintenance history for N1234 — Cessna 172S</p>
+    </div>
+
+    <div style="padding: 28px;">
+      <div class="section-title">Completed Work</div>
+      <div id="logbook-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== MODALS ======================== -->
+
+<!-- MAINTENANCE MODAL -->
+<div class="modal-overlay" id="maint-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Schedule Maintenance</div>
+      <button class="modal-close" onclick="closeMaintModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-index" value="-1">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="maint-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time</label>
+          <input type="time" class="form-input" id="maint-time" value="08:00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Maintenance Type</label>
+        <select class="form-select" id="maint-type">
+          <option value="">— Select Type —</option>
+          <option value="100-Hour Inspection">100-Hour Inspection</option>
+          <option value="Annual Inspection">Annual Inspection</option>
+          <option value="Oil Change">Oil Change</option>
+          <option value="Avionics Work">Avionics Work</option>
+          <option value="Engine Work">Engine Work</option>
+          <option value="Landing Gear">Landing Gear</option>
+          <option value="Airframe Repair">Airframe Repair</option>
+          <option value="Electrical System">Electrical System</option>
+          <option value="Squawk Resolution">Squawk Resolution</option>
+          <option value="Pre-buy Inspection">Pre-buy Inspection</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Technician / Shop</label>
+          <input type="text" class="form-input" id="maint-tech" placeholder="e.g. AeroFix MRO">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Est. Duration</label>
+          <select class="form-select" id="maint-duration">
+            <option value="2 hrs">2 hrs</option>
+            <option value="4 hrs">4 hrs</option>
+            <option value="1 day" selected>1 day</option>
+            <option value="2 days">2 days</option>
+            <option value="3 days">3 days</option>
+            <option value="1 week">1 week</option>
+            <option value="2 weeks">2 weeks</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes / Description</label>
+        <textarea class="form-textarea" id="maint-notes" placeholder="Describe the work to be performed..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-select" id="maint-priority">
+          <option value="low">Low — Can wait</option>
+          <option value="medium" selected>Medium — Schedule Soon</option>
+          <option value="high">High — Urgent</option>
+        </select>
+      </div>
+      <div class="form-footer">
+        <button class="btn-secondary" onclick="closeMaintModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveMaint()">Save Reservation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SQUAWK MODAL -->
+<div class="modal-overlay" id="squawk-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Squawk</div>
+      <button class="modal-close" onclick="closeSquawkModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="sq-desc" placeholder="Describe the discrepancy..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-select" id="sq-priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reported By</label>
+          <input type="text" class="form-input" id="sq-reporter" placeholder="Your name">
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-secondary" onclick="closeSquawkModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveSquawk()">Submit Squawk</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let maintenanceList = [
+  {
+    id: 1,
+    date: '2025-04-05',
+    time: '08:00',
+    type: 'Annual Inspection',
+    tech: 'AeroFix MRO — KPHX',
+    duration: '3 days',
+    notes: 'Full annual inspection per 14 CFR Part 91.409. Will also address the landing light squawk during this visit.',
+    priority: 'high',
+    status: 'scheduled'
+  },
+  {
+    id: 2,
+    date: '2025-04-22',
+    time: '09:00',
+    type: 'Oil Change',
+    tech: 'Desert Sky Aviation',
+    duration: '2 hrs',
+    notes: 'AeroShell 15W-50 semi-synthetic. Check filter.',
+    priority: 'medium',
+    status: 'scheduled'
+  }
+];
+
+let squawks = [
+  { desc: 'Left landing light intermittent', priority: 'medium', reporter: 'J. Smith', date: 'Mar 22', status: 'Scheduled' },
+  { desc: 'Cabin door seal worn — slight draft', priority: 'low', reporter: 'A. Torres', date: 'Mar 18', status: 'Pending' }
+];
+
+let logbook = [
+  { date: '2025-02-14', desc: 'Oil change — AeroShell 15W-50, 100hrs since last change', tech: 'R. Johnson A&P' },
+  { date: '2025-01-08', desc: 'Replaced left magneto — Slick 4373 per SB-M-82', tech: 'AeroFix MRO' },
+  { date: '2024-09-15', desc: 'Annual inspection completed — all systems airworthy', tech: 'AeroFix MRO' },
+  { date: '2024-07-03', desc: 'Replaced alternator belt — Continental P/N 628093', tech: 'R. Johnson A&P' },
+  { date: '2024-04-20', desc: 'Replaced ELT battery — Duracell DL-123A', tech: 'Desert Sky Aviation' },
+  { date: '2024-03-11', desc: '100-hr inspection — no discrepancies found', tech: 'AeroFix MRO' },
+];
+
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let selectedDate = null;
+let nextId = 3;
+
+// ============================================================
+// NAV
+// ============================================================
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+
+  if (page === 'schedule') renderCalendar();
+  if (page === 'maintenance') renderMaintList();
+  if (page === 'logbook') renderLogbook();
+  if (page === 'dashboard') {
+    renderUpcoming();
+    renderSquawks();
+    updateStats();
+  }
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function renderCalendar() {
+  const label = document.getElementById('cal-month-label');
+  label.textContent = MONTHS[currentMonth] + ' ' + currentYear;
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  DAYS.forEach(d => {
+    const h = document.createElement('div');
+    h.className = 'cal-header';
+    h.textContent = d;
+    grid.appendChild(h);
+  });
+
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const today = new Date();
+
+  for (let i = 0; i < firstDay; i++) {
+    const e = document.createElement('div');
+    e.className = 'cal-day empty';
+    grid.appendChild(e);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day';
+
+    const isToday = d === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+    const isPast = new Date(currentYear, currentMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasMaint = maintenanceList.some(m => m.date === dateStr);
+
+    if (isToday) el.classList.add('today');
+    if (isPast && !isToday) el.classList.add('past');
+    if (hasMaint) el.classList.add('has-event', 'has-maint');
+    if (selectedDate === dateStr) el.classList.add('selected');
+
+    el.textContent = d;
+    el.onclick = () => selectDate(dateStr);
+    grid.appendChild(el);
+  }
+}
+
+function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  selectedDate = null;
+  document.getElementById('day-detail').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>Select a date to view or add reservations</p></div>`;
+  renderCalendar();
+}
+
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+  renderCalendar();
+  renderDayDetail(dateStr);
+}
+
+function renderDayDetail(dateStr) {
+  const events = maintenanceList.filter(m => m.date === dateStr);
+  const d = new Date(dateStr + 'T12:00:00');
+  const label = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+  let html = `<div style="font-family:var(--head); font-size:14px; font-weight:700; letter-spacing:1px; margin-bottom:14px; color:var(--text-dim); text-transform:uppercase;">${label}</div>`;
+
+  if (events.length === 0) {
+    html += `<div class="empty-state" style="padding:20px 10px"><div class="empty-icon" style="font-size:24px">🔧</div><p>No maintenance scheduled</p></div>`;
+  } else {
+    events.forEach(ev => {
+      const pColor = ev.priority === 'high' ? 'var(--red)' : ev.priority === 'medium' ? 'var(--amber)' : 'var(--sky)';
+      html += `
+        <div style="background:var(--surface2); border:1px solid var(--border); border-left:3px solid ${pColor}; border-radius:6px; padding:12px; margin-bottom:10px;">
+          <div style="font-family:var(--head); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">${ev.type}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:var(--mono);">${ev.time} · ${ev.duration} · ${ev.tech}</div>
+          ${ev.notes ? `<div style="font-size:12px; color:var(--text-dim); margin-top:6px;">${ev.notes}</div>` : ''}
+        </div>`;
+    });
+  }
+
+  document.getElementById('day-detail').innerHTML = html;
+}
+
+// ============================================================
+// MAINTENANCE
+// ============================================================
+function openMaintModal(idx = -1) {
+  document.getElementById('edit-index').value = idx;
+  if (idx >= 0) {
+    const m = maintenanceList[idx];
+    document.getElementById('maint-date').value = m.date;
+    document.getElementById('maint-time').value = m.time;
+    document.getElementById('maint-type').value = m.type;
+    document.getElementById('maint-tech').value = m.tech;
+    document.getElementById('maint-duration').value = m.duration;
+    document.getElementById('maint-notes').value = m.notes;
+    document.getElementById('maint-priority').value = m.priority;
+  } else {
+    document.getElementById('maint-date').value = '';
+    document.getElementById('maint-time').value = '08:00';
+    document.getElementById('maint-type').value = '';
+    document.getElementById('maint-tech').value = '';
+    document.getElementById('maint-duration').value = '1 day';
+    document.getElementById('maint-notes').value = '';
+    document.getElementById('maint-priority').value = 'medium';
+  }
+  document.getElementById('maint-modal').classList.add('open');
+}
+
+function closeMaintModal() {
+  document.getElementById('maint-modal').classList.remove('open');
+}
+
+function saveMaint() {
+  const date = document.getElementById('maint-date').value;
+  const type = document.getElementById('maint-type').value;
+  const tech = document.getElementById('maint-tech').value;
+
+  if (!date) { showToast('Please select a date', true); return; }
+  if (!type) { showToast('Please select a maintenance type', true); return; }
+  if (!tech) { showToast('Please enter a technician or shop', true); return; }
+
+  const item = {
+    id: nextId++,
+    date,
+    time: document.getElementById('maint-time').value,
+    type,
+    tech,
+    duration: document.getElementById('maint-duration').value,
+    notes: document.getElementById('maint-notes').value,
+    priority: document.getElementById('maint-priority').value,
+    status: 'scheduled'
+  };
+
+  const editIdx = parseInt(document.getElementById('edit-index').value);
+  if (editIdx >= 0) {
+    item.id = maintenanceList[editIdx].id;
+    maintenanceList[editIdx] = item;
+    showToast('Reservation updated ✓');
+  } else {
+    maintenanceList.push(item);
+    showToast('Maintenance scheduled ✓');
+  }
+
+  maintenanceList.sort((a,b) => a.date.localeCompare(b.date));
+  closeMaintModal();
+  renderMaintList();
+  renderUpcoming();
+  updateStats();
+  if (document.getElementById('page-schedule').classList.contains('active')) renderCalendar();
+}
+
+function deleteMaint(idx) {
+  if (!confirm('Delete this maintenance reservation?')) return;
+  maintenanceList.splice(idx, 1);
+  renderMaintList();
+  renderUpcoming();
+  updateStats();
+  showToast('Reservation removed');
+}
+
+function renderMaintList() {
+  const el = document.getElementById('maint-list');
+  if (maintenanceList.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔧</div><p>No maintenance scheduled. Click "+ Schedule Maintenance" to add one.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = maintenanceList.map((m, i) => {
+    const d = new Date(m.date + 'T12:00:00');
+    const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const day = d.getDate();
+    const pColor = m.priority === 'high' ? 'var(--red)' : m.priority === 'medium' ? 'var(--amber)' : 'var(--sky)';
+    const chipClass = m.priority === 'high' ? 'chip-red' : m.priority === 'medium' ? 'chip-amber' : 'chip-sky';
+
+    return `
+      <div class="maint-item">
+        <div class="maint-date-block">
+          <div class="maint-month">${month}</div>
+          <div class="maint-day">${day}</div>
+        </div>
+        <div class="maint-info">
+          <div class="maint-type">${m.type}</div>
+          <div class="maint-detail">${m.time} · ${m.duration} · ${m.tech}</div>
+          ${m.notes ? `<div class="maint-detail" style="margin-top:4px; font-style:italic;">${m.notes}</div>` : ''}
+          <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="chip ${chipClass}">${m.priority} priority</span>
+            <span class="chip chip-sky">N1234</span>
+          </div>
+        </div>
+        <div class="maint-actions">
+          <button class="btn-icon edit" onclick="openMaintModal(${i})" title="Edit">✎</button>
+          <button class="btn-icon" onclick="deleteMaint(${i})" title="Delete">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+// SQUAWKS
+// ============================================================
+function openSquawkModal() {
+  document.getElementById('sq-desc').value = '';
+  document.getElementById('sq-priority').value = 'medium';
+  document.getElementById('sq-reporter').value = '';
+  document.getElementById('squawk-modal').classList.add('open');
+}
+
+function closeSquawkModal() {
+  document.getElementById('squawk-modal').classList.remove('open');
+}
+
+function saveSquawk() {
+  const desc = document.getElementById('sq-desc').value.trim();
+  if (!desc) { showToast('Please describe the squawk', true); return; }
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  squawks.unshift({
+    desc,
+    priority: document.getElementById('sq-priority').value,
+    reporter: document.getElementById('sq-reporter').value || 'Anonymous',
+    date: dateStr,
+    status: 'Pending'
+  });
+
+  closeSquawkModal();
+  renderSquawks();
+  updateStats();
+  showToast('Squawk submitted ✓');
+}
+
+function renderSquawks() {
+  const tbody = document.getElementById('squawk-body');
+  if (!tbody) return;
+  tbody.innerHTML = squawks.map(s => {
+    const pClass = s.priority === 'high' ? 'priority-high' : s.priority === 'medium' ? 'priority-med' : 'priority-low';
+    const pLabel = s.priority.charAt(0).toUpperCase() + s.priority.slice(1);
+    const chipClass = s.status === 'Scheduled' ? 'chip-amber' : 'chip-sky';
+    return `<tr>
+      <td><span class="priority-dot ${pClass}"></span>${pLabel}</td>
+      <td>${s.desc}</td>
+      <td>${s.date}</td>
+      <td><span class="chip ${chipClass}">${s.status}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// LOGBOOK
+// ============================================================
+function renderLogbook() {
+  const el = document.getElementById('logbook-list');
+  el.innerHTML = logbook.map(l => `
+    <div class="log-entry">
+      <div class="log-date">${l.date}</div>
+      <div class="log-desc">${l.desc}</div>
+      <div class="log-tech">${l.tech}</div>
+    </div>`).join('');
+}
+
+// ============================================================
+// SIDEBAR UPCOMING
+// ============================================================
+function renderUpcoming() {
+  const el = document.getElementById('sidebar-upcoming');
+  if (!el) return;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const upcoming = maintenanceList
+    .filter(m => new Date(m.date + 'T12:00:00') >= today)
+    .slice(0, 3);
+
+  if (upcoming.length === 0) {
+    el.innerHTML = `<div class="empty-state" style="padding:16px 0;"><p>No upcoming maintenance</p></div>`;
+    return;
+  }
+
+  el.innerHTML = upcoming.map(m => {
+    const d = new Date(m.date + 'T12:00:00');
+    const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const day = d.getDate();
+    const pColor = m.priority === 'high' ? 'var(--red)' : m.priority === 'medium' ? 'var(--amber)' : 'var(--sky)';
+    return `
+      <div style="display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--border);">
+        <div class="maint-date-block" style="min-width:38px; padding:4px;">
+          <div class="maint-month" style="font-size:8px;">${month}</div>
+          <div class="maint-day" style="font-size:18px;">${day}</div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:var(--head); font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-left:2px solid ${pColor}; padding-left:6px;">${m.type}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${m.tech} · ${m.duration}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  document.getElementById('stat-squawks').textContent = squawks.length;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// CLOSE MODALS ON OVERLAY CLICK
+// ============================================================
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => {
+    if (e.target === o) {
+      o.classList.remove('open');
+    }
+  });
+});
+
+// ============================================================
+// INIT
+// ============================================================
+renderUpcoming();
+renderSquawks();
+updateStats();
+</script>
+</body>
+</html>
