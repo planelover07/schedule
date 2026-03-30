@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N353JK — KDVT Flight Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0e0e; --bg2:#141414; --surface:#1a1a1a; --surface2:#222; --border:#2e2e2e; --border2:#3a3a3a;
+  --silver:#c8c8c8; --silver-d:#8a8a8a; --silver-l:#ebebeb; --sg:rgba(200,200,200,.08);
+  --green:#5eead4; --red:#f87171; --blue:#93c5fd; --yellow:#fcd34d;
+  --text:#e4e4e4; --text-dim:#a0a0a0; --text-muted:#5a5a5a;
+  --mono:'JetBrains Mono',monospace; --head:'Rajdhani',sans-serif; --body:'DM Sans',sans-serif; --r:6px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;min-height:100vh;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");background-repeat:repeat;background-size:140px;pointer-events:none;z-index:0;opacity:.5;}
+
+/* ── role visibility ── */
+.mod-only{display:none!important;}
+body.mod .mod-only{display:flex!important;}
+body.mod .mod-btn-block{display:flex!important;}
+body.mod .mod-inline{display:inline-flex!important;}
+body.mod .mod-cell{display:table-cell!important;}
+.mod-btn-block{display:none!important;}
+.mod-inline{display:none!important;}
+.mod-cell{display:none!important;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(14,14,14,.96);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;z-index:100;backdrop-filter:blur(16px);gap:0;}
+.nav-logo{display:flex;align-items:center;gap:10px;padding-right:22px;border-right:1px solid var(--border);margin-right:8px;text-decoration:none;}
+.nav-logo-text{font-family:var(--head);font-weight:700;font-size:13px;letter-spacing:3px;color:var(--silver-d);text-transform:uppercase;line-height:1.2;}
+.nav-logo-text span{display:block;font-size:9px;letter-spacing:4px;color:var(--text-muted);}
+.nav-links{display:flex;gap:2px;list-style:none;}
+.nav-links button{background:none;border:none;color:var(--text-muted);font-family:var(--head);font-size:12px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;border-radius:var(--r);transition:all .18s;position:relative;}
+.nav-links button::after{content:'';position:absolute;bottom:2px;left:12px;right:12px;height:1px;background:var(--silver);transform:scaleX(0);transition:transform .2s;}
+.nav-links button:hover{color:var(--silver);}
+.nav-links button.active{color:var(--silver-l);}
+.nav-links button.active::after{transform:scaleX(1);}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.tail-badge{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--silver);background:var(--surface2);border:1px solid var(--border2);padding:3px 10px;border-radius:var(--r);}
+.status-pill{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--green);}
+.status-pip{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2.4s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* lock button */
+.lock-btn{background:none;border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;cursor:pointer;color:var(--text-muted);font-family:var(--mono);font-size:10px;letter-spacing:1px;display:flex;align-items:center;gap:5px;transition:all .2s;}
+.lock-btn:hover{border-color:var(--silver-d);color:var(--silver);}
+.lock-btn.unlocked{border-color:rgba(94,234,212,.4);color:var(--green);}
+.mod-banner{display:none;background:rgba(94,234,212,.06);border-bottom:1px solid rgba(94,234,212,.2);padding:3px 18px;font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--green);text-transform:uppercase;text-align:center;}
+body.mod .mod-banner{display:block;}
+
+/* ── LAYOUT ── */
+.app{position:relative;z-index:1;}
+.page{display:none;padding-top:52px;min-height:100vh;}
+.page.active{display:block;animation:fadeIn .22s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── PAGE HEADER ── */
+.page-header{padding:32px 28px 24px;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.page-header::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--silver-d),transparent);opacity:.4;}
+.ph-label{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;}
+.ph-title{font-family:var(--head);font-size:40px;font-weight:700;letter-spacing:1px;line-height:1;text-transform:uppercase;}
+.ph-title em{font-style:normal;color:var(--silver-d);}
+.ph-sub{margin-top:7px;color:var(--text-muted);font-size:13px;font-weight:300;}
+
+/* ── STAT STRIP ── */
+.stat-strip{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--border);position:relative;}
+.stat-edit-btn{position:absolute;top:8px;right:10px;z-index:2;}
+.stat-block{padding:16px 20px;border-right:1px solid var(--border);transition:background .2s;cursor:default;}
+.stat-block:last-child{border-right:none;}
+.stat-block:hover{background:var(--surface);}
+.sb-label{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;}
+.sb-value{font-family:var(--head);font-size:26px;font-weight:700;line-height:1;color:var(--silver-l);}
+.sb-value.green{color:var(--green);} .sb-value.blue{color:var(--blue);} .sb-value.yellow{color:var(--yellow);}
+.sb-unit{font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:3px;letter-spacing:1px;}
+
+/* ── TWO-COL ── */
+.two-col{display:grid;grid-template-columns:1fr 340px;}
+.col-main{border-right:1px solid var(--border);padding:24px;}
+.col-side{padding:24px;}
+.sec-label{font-family:var(--head);font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:9px;}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── AIRCRAFT CARD ── */
+.ac-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+.ac-card-top{display:flex;align-items:center;justify-content:space-between;padding:12px 17px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.ac-tail{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:4px;color:var(--silver-l);}
+.ac-model{font-family:var(--head);font-size:12px;color:var(--text-muted);letter-spacing:1px;}
+.status-badge{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;border-radius:3px;display:flex;align-items:center;gap:5px;}
+.badge-green{background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.25);color:var(--green);}
+.badge-yellow{background:rgba(252,211,77,.1);border:1px solid rgba(252,211,77,.25);color:var(--yellow);}
+.badge-red{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:var(--red);}
+.ac-specs{display:grid;grid-template-columns:repeat(3,1fr);}
+.spec{padding:10px 17px;border-right:1px solid var(--border);}
+.spec:last-child{border-right:none;}
+.spec-k{font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:2px;}
+.spec-v{font-family:var(--mono);font-size:11px;color:var(--silver);}
+
+/* ── EVENT ITEMS ── */
+.event-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.event-item:last-child{border-bottom:none;}
+.edb{min-width:40px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:4px;}
+.edb-mon{font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;}
+.edb-day{font-family:var(--head);font-size:19px;font-weight:700;color:var(--silver);line-height:1.1;}
+.ev-body{flex:1;}
+.ev-title{font-family:var(--head);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text);}
+.ev-meta{font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:3px;}
+.ev-note{font-size:12px;color:var(--text-dim);margin-top:4px;font-style:italic;}
+.ev-actions{display:flex;gap:5px;flex-shrink:0;}
+.icon-btn{width:28px;height:28px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:var(--r);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;}
+.icon-btn:hover{border-color:var(--red);color:var(--red);}
+.icon-btn.edit:hover{border-color:var(--silver-d);color:var(--silver-l);}
+
+/* ── CHIP ── */
+.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;}
+.chip-green{background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.2);color:var(--green);}
+.chip-red{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);}
+.chip-blue{background:rgba(147,197,253,.1);border:1px solid rgba(147,197,253,.2);color:var(--blue);}
+.chip-yellow{background:rgba(252,211,77,.1);border:1px solid rgba(252,211,77,.2);color:var(--yellow);}
+.chip-silver{background:var(--sg);border:1px solid var(--border2);color:var(--silver-d);}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{text-align:left;padding:8px 11px;font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);}
+.tbl td{padding:9px 11px;border-bottom:1px solid rgba(46,46,46,.5);font-size:12px;color:var(--text-dim);}
+.tbl tr:hover td{background:var(--surface2);}
+.prio-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+.prio-h{background:var(--red);box-shadow:0 0 5px var(--red);}
+.prio-m{background:var(--yellow);box-shadow:0 0 5px var(--yellow);}
+.prio-l{background:var(--blue);box-shadow:0 0 5px var(--blue);}
+
+/* ── CALENDAR ── */
+.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.month-nav-title{font-family:var(--head);font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--silver);}
+.month-btn{width:28px;height:28px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:var(--r);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.month-btn:hover{border-color:var(--silver-d);color:var(--silver);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px;}
+.cal-hdr{text-align:center;padding:6px 2px;font-family:var(--mono);font-size:9px;letter-spacing:1.5px;color:var(--text-muted);text-transform:uppercase;}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--r);cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--mono);font-size:11px;color:var(--text-dim);background:var(--surface);position:relative;gap:2px;}
+.cal-day:hover:not(.empty){border-color:var(--silver-d);color:var(--silver);background:var(--surface2);}
+.cal-day.today{border-color:var(--silver-d);color:var(--silver-l);font-weight:700;}
+.cal-day.selected{background:var(--surface2);border-color:var(--silver);color:var(--silver-l);}
+.cal-day.empty{background:none;border-color:transparent;cursor:default;}
+.cal-day.past{opacity:.3;}
+.cal-dots{display:flex;gap:2px;}
+.cal-dot{width:4px;height:4px;border-radius:50%;}
+.dot-flight{background:var(--blue);} .dot-maint{background:var(--yellow);}
+.legend{display:flex;gap:14px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:1px;}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
+
+/* ── LOGBOOK ── */
+.log-table{width:100%;border-collapse:collapse;}
+.log-table th{text-align:left;padding:8px 12px;font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+.log-table td{padding:11px 12px;border-bottom:1px solid rgba(46,46,46,.5);font-size:12px;color:var(--text-dim);vertical-align:top;}
+.log-table tr:hover td{background:var(--surface2);}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:9px 18px;border-radius:var(--r);cursor:pointer;border:none;transition:all .18s;}
+.btn-primary{background:var(--silver);color:#0e0e0e;}
+.btn-primary:hover{background:var(--silver-l);box-shadow:0 4px 18px rgba(200,200,200,.2);transform:translateY(-1px);}
+.btn-secondary{background:none;color:var(--text-muted);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--silver-d);color:var(--silver);}
+.btn-flight{background:rgba(147,197,253,.15);color:var(--blue);border:1px solid rgba(147,197,253,.3);}
+.btn-flight:hover{background:rgba(147,197,253,.25);box-shadow:0 4px 18px rgba(147,197,253,.15);transform:translateY(-1px);}
+.btn-sm{padding:5px 11px;font-size:10px;letter-spacing:1.5px;}
+
+/* ── FILTER TABS ── */
+.filter-tabs{display:flex;gap:4px;margin-bottom:18px;}
+.ftab{font-family:var(--head);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:5px 12px;border-radius:var(--r);cursor:pointer;border:1px solid var(--border);background:none;color:var(--text-muted);transition:all .15s;}
+.ftab:hover{color:var(--silver);border-color:var(--border2);}
+.ftab.active{background:var(--surface2);color:var(--silver-l);border-color:var(--border2);}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(10,10,10,.9);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:520px;max-width:96vw;max-height:90vh;overflow-y:auto;animation:mIn .22s ease;}
+@keyframes mIn{from{opacity:0;transform:scale(.97) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-head{padding:16px 22px;border-bottom:1px solid var(--border);background:var(--surface2);border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between;}
+.mh-title{font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--silver-l);}
+.mh-sub{font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:1.5px;margin-top:2px;}
+.modal-close{background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;transition:color .15s;line-height:1;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:22px;}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border);margin-top:4px;}
+
+/* ── FORM ── */
+.fg{margin-bottom:15px;}
+.fl{display:block;font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;}
+.fi,.fs,.fta{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 12px;outline:none;transition:border-color .2s;-webkit-appearance:none;}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--silver-d);box-shadow:0 0 0 2px var(--sg);}
+.fta{resize:vertical;min-height:70px;}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+option{background:var(--surface);}
+
+/* ── QI row ── */
+.qi{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+.qi:last-child{border-bottom:none;}
+.qi-label{font-size:12px;color:var(--text-muted);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border2);font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:10px 18px;border-radius:var(--r);z-index:400;transform:translateY(70px);opacity:0;transition:all .28s ease;color:var(--silver);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.ok{border-color:rgba(94,234,212,.4);color:var(--green);}
+.toast.err{border-color:rgba(248,113,113,.4);color:var(--red);}
+.empty{text-align:center;padding:32px 20px;color:var(--text-muted);font-family:var(--mono);font-size:11px;}
+.empty-icon{font-size:30px;margin-bottom:10px;opacity:.3;}
+
+/* stat edit rows */
+.stat-edit-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid var(--border);}
+.stat-edit-row:last-child{border-bottom:none;}
+.stat-edit-row .fg{margin-bottom:0;}
+.stat-row-label{font-family:var(--head);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--silver-d);padding-bottom:6px;font-weight:600;}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--silver-d);}
+
+@media(max-width:820px){
+  .stat-strip{grid-template-columns:repeat(3,1fr);}
+  .two-col{grid-template-columns:1fr;}
+  .col-main{border-right:none;}
+  .ac-specs{grid-template-columns:repeat(2,1fr);}
+  .ph-title{font-size:30px;}
+  .f-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="mod-banner">⬡ Moderator Mode Active — Full Access Enabled</div>
+
+<nav>
+  <!-- Attitude Indicator logo -->
+  <div class="nav-logo">
+    <svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="ai-clip"><circle cx="19" cy="19" r="15"/></clipPath>
+      </defs>
+      <!-- outer bezel -->
+      <circle cx="19" cy="19" r="18" fill="#161616" stroke="#444" stroke-width="1.2"/>
+      <!-- sky -->
+      <rect x="4" y="4" width="30" height="17" fill="#0f2d4a" clip-path="url(#ai-clip)"/>
+      <!-- earth -->
+      <rect x="4" y="21" width="30" height="13" fill="#3b1f06" clip-path="url(#ai-clip)"/>
+      <!-- horizon line -->
+      <line x1="4" y1="21" x2="34" y2="21" stroke="#e8e8e8" stroke-width="1.4" clip-path="url(#ai-clip)"/>
+      <!-- pitch lines — sky -->
+      <line x1="13" y1="17" x2="25" y2="17" stroke="rgba(255,255,255,0.32)" stroke-width="0.8" clip-path="url(#ai-clip)"/>
+      <!-- pitch lines — earth -->
+      <line x1="13" y1="25" x2="25" y2="25" stroke="rgba(255,255,255,0.22)" stroke-width="0.8" clip-path="url(#ai-clip)"/>
+      <!-- bank arc -->
+      <path d="M 8.5,14.5 A 12,12 0 0,1 29.5,14.5" fill="none" stroke="#555" stroke-width="0.9" clip-path="url(#ai-clip)"/>
+      <!-- bank pointer (triangle at top, level) -->
+      <polygon points="19,6 17.5,9.2 20.5,9.2" fill="#e8e8e8" clip-path="url(#ai-clip)"/>
+      <!-- LEFT wing reference -->
+      <line x1="7"  y1="21" x2="14.5" y2="21" stroke="#e8e8e8" stroke-width="2.2" stroke-linecap="round" clip-path="url(#ai-clip)"/>
+      <line x1="14.5" y1="21" x2="14.5" y2="24" stroke="#e8e8e8" stroke-width="2.2" stroke-linecap="round" clip-path="url(#ai-clip)"/>
+      <!-- RIGHT wing reference -->
+      <line x1="31" y1="21" x2="23.5" y2="21" stroke="#e8e8e8" stroke-width="2.2" stroke-linecap="round" clip-path="url(#ai-clip)"/>
+      <line x1="23.5" y1="21" x2="23.5" y2="24" stroke="#e8e8e8" stroke-width="2.2" stroke-linecap="round" clip-path="url(#ai-clip)"/>
+      <!-- center fuselage dot -->
+      <circle cx="19" cy="21" r="2.2" fill="#e8e8e8" clip-path="url(#ai-clip)"/>
+      <!-- inner bezel ring overlay -->
+      <circle cx="19" cy="19" r="15" fill="none" stroke="#2a2a2a" stroke-width="2"/>
+      <!-- bezel bank-angle tick marks -->
+      <line x1="19" y1="2.5" x2="19" y2="5"   stroke="#666" stroke-width="1.2"/>
+      <line x1="9.4" y1="5.5"  x2="10.7" y2="7.7" stroke="#555" stroke-width="0.9"/>
+      <line x1="28.6" y1="5.5" x2="27.3" y2="7.7" stroke="#555" stroke-width="0.9"/>
+      <line x1="3"  y1="19" x2="5.5" y2="19" stroke="#555" stroke-width="0.9"/>
+      <line x1="35" y1="19" x2="32.5" y2="19" stroke="#555" stroke-width="0.9"/>
+    </svg>
+    <div class="nav-logo-text">Flight Ops<span>KDVT · N353JK</span></div>
+  </div>
+
+  <ul class="nav-links">
+    <li><button id="nav-dashboard" class="active" onclick="showPage('dashboard')">Dashboard</button></li>
+    <li><button id="nav-schedule"  onclick="showPage('schedule')">Schedule</button></li>
+    <li><button id="nav-flights"   onclick="showPage('flights')">Flights</button></li>
+    <li><button id="nav-maintenance" class="mod-only" onclick="showPage('maintenance')">Maintenance</button></li>
+    <li><button id="nav-logbook"   class="mod-only" onclick="showPage('logbook')">Logbook</button></li>
+  </ul>
+
+  <div class="nav-right">
+    <div class="tail-badge">N353JK</div>
+    <div class="status-pill"><div class="status-pip"></div>Airworthy</div>
+    <button class="lock-btn" id="lock-btn" onclick="toggleAuth()">🔒 Mod Login</button>
+  </div>
+</nav>
+
+<div class="app">
+
+<!-- ═══════════════ DASHBOARD ═══════════════ -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <div class="ph-label">// Aircraft Management — KDVT</div>
+    <h1 class="ph-title">Fleet <em>Operations</em></h1>
+    <p class="ph-sub" id="ph-sub-dash">Cessna 150M · N353JK · 1975 · Deer Valley Airport, AZ</p>
+  </div>
+
+  <div class="stat-strip" id="stat-strip">
+    <div class="stat-block">
+      <div class="sb-label" id="sl-0">Tach Hours</div>
+      <div class="sb-value" id="sv-0">—</div>
+      <div class="sb-unit" id="su-0">Total</div>
+    </div>
+    <div class="stat-block">
+      <div class="sb-label" id="sl-1">Next 100-Hr</div>
+      <div class="sb-value blue" id="sv-1">—</div>
+      <div class="sb-unit" id="su-1">Hrs Out</div>
+    </div>
+    <div class="stat-block">
+      <div class="sb-label" id="sl-2">Annual Due</div>
+      <div class="sb-value green" id="sv-2">—</div>
+      <div class="sb-unit" id="su-2">Expiry</div>
+    </div>
+    <div class="stat-block">
+      <div class="sb-label" id="sl-3">Flights Booked</div>
+      <div class="sb-value" id="sv-3">0</div>
+      <div class="sb-unit" id="su-3">Upcoming</div>
+    </div>
+    <div class="stat-block">
+      <div class="sb-label" id="sl-4">Open Squawks</div>
+      <div class="sb-value" id="sv-4">0</div>
+      <div class="sb-unit" id="su-4">Items</div>
+    </div>
+    <div class="stat-edit-btn mod-only" style="display:none;">
+      <button class="btn btn-secondary btn-sm" onclick="openModal('stats-modal')" style="font-size:9px;padding:3px 9px;">✎ Edit Stats</button>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="col-main">
+
+      <!-- Aircraft Card -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="sec-label" style="margin-bottom:0;flex:1;">Aircraft</div>
+        <button class="btn btn-secondary btn-sm mod-only" onclick="openModal('ac-modal')" style="font-size:9px;padding:3px 9px;">✎ Edit Details</button>
+      </div>
+      <div class="ac-card">
+        <div class="ac-card-top">
+          <div><div class="ac-tail" id="ac-tail">N353JK</div><div class="ac-model" id="ac-model">Cessna 150M — 1975</div></div>
+          <div class="status-badge badge-green" id="ac-status">● Airworthy</div>
+        </div>
+        <div class="ac-specs" id="ac-specs">
+          <div class="spec"><div class="spec-k">Engine</div><div class="spec-v" id="ac-engine">Continental O-200-A</div></div>
+          <div class="spec"><div class="spec-k">Power</div><div class="spec-v" id="ac-power">100 HP</div></div>
+          <div class="spec"><div class="spec-k">Fuel</div><div class="spec-v" id="ac-fuel">100LL · 26 GAL</div></div>
+          <div class="spec"><div class="spec-k">Seats</div><div class="spec-v" id="ac-seats">2 — Side by Side</div></div>
+          <div class="spec"><div class="spec-k">Avionics</div><div class="spec-v" id="ac-avionics">Narco MK-12D</div></div>
+          <div class="spec"><div class="spec-k">Home</div><div class="spec-v" id="ac-home">KDVT</div></div>
+        </div>
+      </div>
+
+      <!-- Squawks -->
+      <div class="sec-label">Open Squawks</div>
+      <table class="tbl">
+        <thead><tr><th>Priority</th><th>Discrepancy</th><th>Reported</th><th>Status</th><th class="mod-cell"></th></tr></thead>
+        <tbody id="sq-body"></tbody>
+      </table>
+      <div style="margin-top:12px;">
+        <button class="btn btn-secondary btn-sm" onclick="openModal('squawk-modal')">+ Log Squawk</button>
+      </div>
+    </div>
+
+    <div class="col-side">
+      <div class="sec-label">Upcoming Events</div>
+      <div id="dash-upcoming"></div>
+
+      <div style="margin-top:22px;">
+        <div class="sec-label">Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn btn-flight" style="width:100%;justify-content:center;" onclick="showPage('flights');openFlightModal()">✈ Schedule a Flight</button>
+          <button class="btn btn-primary mod-btn-block" style="width:100%;justify-content:center;" onclick="showPage('maintenance');openMaintModal()">⚙ Schedule Maintenance</button>
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;" onclick="showPage('schedule')">View Full Calendar</button>
+        </div>
+      </div>
+
+      <div style="margin-top:22px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="sec-label" style="margin-bottom:0;flex:1;min-width:0;">Airworthiness</div>
+          <button id="aw-edit-btn" onclick="openModal('aw-modal')" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--text-muted);font-family:var(--head);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;cursor:pointer;flex-shrink:0;margin-left:10px;transition:all .15s;" onmouseover="this.style.borderColor='var(--silver-d)';this.style.color='var(--silver)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">✎ Edit</button>
+        </div>
+        <div id="aw-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCHEDULE ═══════════════ -->
+<div class="page" id="page-schedule">
+  <div class="page-header">
+    <div class="ph-label">// Calendar View</div>
+    <h1 class="ph-title">Full <em>Schedule</em></h1>
+    <p class="ph-sub">All flights and maintenance for N353JK</p>
+  </div>
+  <div class="two-col">
+    <div class="col-main">
+      <div class="month-nav">
+        <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="month-nav-title" id="cal-label"></div>
+        <button class="month-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot dot-flight"></div>Flight</div>
+        <div class="leg-item"><div class="leg-dot dot-maint"></div>Maintenance</div>
+      </div>
+    </div>
+    <div class="col-side">
+      <div class="sec-label">Day Detail</div>
+      <div id="day-detail"><div class="empty"><div class="empty-icon">📅</div>Select a date</div></div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:7px;">
+        <button class="btn btn-flight btn-sm" style="width:100%;justify-content:center;" onclick="openFlightModal()">✈ Add Flight</button>
+        <button class="btn btn-primary btn-sm mod-btn-block" style="width:100%;justify-content:center;" onclick="openMaintModal()">⚙ Add Maintenance</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FLIGHTS ═══════════════ -->
+<div class="page" id="page-flights">
+  <div class="page-header">
+    <div class="ph-label">// Flight Reservations</div>
+    <h1 class="ph-title">Flight <em>Bookings</em></h1>
+    <p class="ph-sub">Schedule and manage flight time for N353JK — Cessna 150M</p>
+  </div>
+  <div style="padding:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="filter-tabs" style="margin-bottom:0;">
+        <button class="ftab active" onclick="setFlightFilter('all',this)">All</button>
+        <button class="ftab" onclick="setFlightFilter('upcoming',this)">Upcoming</button>
+        <button class="ftab" onclick="setFlightFilter('past',this)">Past</button>
+      </div>
+      <button class="btn btn-flight" onclick="openFlightModal()">✈ New Reservation</button>
+    </div>
+    <div id="flights-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAINTENANCE (mod only) ═══════════════ -->
+<div class="page" id="page-maintenance">
+  <div class="page-header">
+    <div class="ph-label">// Maintenance Scheduling</div>
+    <h1 class="ph-title">Maintenance <em>Reservations</em></h1>
+    <p class="ph-sub">Schedule and track all maintenance events for N353JK</p>
+  </div>
+  <div style="padding:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="sec-label" style="margin-bottom:0;flex:1;">All Scheduled</div>
+      <button class="btn btn-primary" onclick="openMaintModal()">⚙ Schedule Maintenance</button>
+    </div>
+    <div id="maint-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ LOGBOOK (mod only) ═══════════════ -->
+<div class="page" id="page-logbook">
+  <div class="page-header">
+    <div class="ph-label">// Maintenance Records</div>
+    <h1 class="ph-title">Maintenance <em>Logbook</em></h1>
+    <p class="ph-sub">Complete maintenance history — N353JK · Cessna 150M · 1975</p>
+  </div>
+  <div style="padding:24px;overflow-x:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="sec-label" style="margin-bottom:0;flex:1;">All Entries</div>
+      <button class="btn btn-primary" onclick="openLogModal()">+ Add Entry</button>
+    </div>
+    <table class="log-table">
+      <thead><tr><th>Date</th><th>Work Performed</th><th>Part / Reference</th><th>Technician / A&P</th><th>Tach Hrs</th><th></th></tr></thead>
+      <tbody id="log-body"></tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- ══════════ MODALS ══════════ -->
+
+<!-- LOGIN -->
+<div class="overlay" id="login-modal">
+  <div class="modal" style="width:380px;">
+    <div class="modal-head">
+      <div><div class="mh-title">Moderator Login</div><div class="mh-sub">Enter password to unlock full access</div></div>
+      <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg"><label class="fl">Password</label><input type="password" class="fi" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div id="login-err" style="color:var(--red);font-family:var(--mono);font-size:11px;margin-top:-8px;margin-bottom:8px;display:none;">Incorrect password</div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('login-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="doLogin()">Unlock</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS EDIT -->
+<div class="overlay" id="stats-modal">
+  <div class="modal" style="width:580px;">
+    <div class="modal-head">
+      <div><div class="mh-title">Edit Dashboard Stats</div><div class="mh-sub">Label · Value · Unit for each stat block</div></div>
+      <button class="modal-close" onclick="closeModal('stats-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;">Label</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;">Value</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;">Unit</div>
+      </div>
+      <div id="stats-edit-rows"></div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('stats-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveStats()">Save Stats</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AIRCRAFT EDIT -->
+<div class="overlay" id="ac-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="mh-title">Edit Aircraft Details</div><div class="mh-sub">N353JK — Spec Card</div></div>
+      <button class="modal-close" onclick="closeModal('ac-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="f-row">
+        <div class="fg"><label class="fl">Tail Number</label><input type="text" class="fi" id="ac-f-tail" placeholder="N353JK"></div>
+        <div class="fg"><label class="fl">Model / Year</label><input type="text" class="fi" id="ac-f-model" placeholder="Cessna 150M — 1975"></div>
+      </div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Engine</label><input type="text" class="fi" id="ac-f-engine" placeholder="Continental O-200-A"></div>
+        <div class="fg"><label class="fl">Horsepower</label><input type="text" class="fi" id="ac-f-power" placeholder="100 HP"></div>
+      </div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Fuel</label><input type="text" class="fi" id="ac-f-fuel" placeholder="100LL · 26 GAL"></div>
+        <div class="fg"><label class="fl">Seats</label><input type="text" class="fi" id="ac-f-seats" placeholder="2 — Side by Side"></div>
+      </div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Avionics</label><input type="text" class="fi" id="ac-f-avionics" placeholder="Narco MK-12D"></div>
+        <div class="fg"><label class="fl">Home Airport</label><input type="text" class="fi" id="ac-f-home" placeholder="KDVT"></div>
+      </div>
+      <div class="fg"><label class="fl">Status</label>
+        <select class="fs" id="ac-f-status">
+          <option value="green">● Airworthy</option>
+          <option value="yellow">⚠ Maintenance Required</option>
+          <option value="red">✕ Grounded</option>
+        </select>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('ac-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAcDetails()">Save Details</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FLIGHT -->
+<div class="overlay" id="flight-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="mh-title">Reserve N353JK</div><div class="mh-sub">Flight Reservation · Cessna 150M</div></div>
+      <button class="modal-close" onclick="closeModal('flight-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fl-edit-idx" value="-1">
+      <div class="f-row">
+        <div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="fl-date" onchange="checkFlightDateConflict(this.value)"></div>
+        <div class="fg"><label class="fl">Departure Time</label><input type="time" class="fi" id="fl-time" value="09:00"></div>
+      </div>
+      <div id="fl-conflict-warn" style="display:none;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:var(--r);padding:10px 14px;margin-bottom:4px;font-family:var(--mono);font-size:11px;color:var(--red);letter-spacing:.5px;"></div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Pilot Name</label><input type="text" class="fi" id="fl-pilot" placeholder="Full name"></div>
+        <div class="fg"><label class="fl">Est. Duration</label>
+          <select class="fs" id="fl-duration">
+            <option>1 hr</option><option>1.5 hrs</option><option selected>2 hrs</option>
+            <option>3 hrs</option><option>4 hrs</option><option>5 hrs</option><option>Full Day</option>
+          </select>
+        </div>
+      </div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Flight Type</label>
+          <select class="fs" id="fl-type">
+            <option>Local / Pattern</option><option>Cross-Country</option>
+            <option>Instrument Training</option><option>Solo</option>
+            <option>Discovery Flight</option><option>Checkride Prep</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Destination / Route</label><input type="text" class="fi" id="fl-dest" placeholder="e.g. KSDL or Local"></div>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fta" id="fl-notes" placeholder="Optional notes..."></textarea></div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('flight-modal')">Cancel</button>
+        <button class="btn btn-flight" onclick="saveFlight()">✈ Confirm Reservation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAINTENANCE -->
+<div class="overlay" id="maint-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="mh-title">Schedule Maintenance</div><div class="mh-sub">N353JK · Cessna 150M</div></div>
+      <button class="modal-close" onclick="closeModal('maint-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mt-edit-idx" value="-1">
+      <div class="f-row">
+        <div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="mt-date"></div>
+        <div class="fg"><label class="fl">Start Time</label><input type="time" class="fi" id="mt-time" value="08:00"></div>
+      </div>
+      <div class="fg"><label class="fl">Maintenance Type</label>
+        <select class="fs" id="mt-type">
+          <option value="">— Select —</option>
+          <option>100-Hour Inspection</option><option>Annual Inspection</option>
+          <option>Oil Change</option><option>Magneto Service</option>
+          <option>Carburetor Service</option><option>Avionics Work</option>
+          <option>Engine Work</option><option>Landing Gear</option>
+          <option>Airframe Repair</option><option>Electrical System</option>
+          <option>Squawk Resolution</option><option>Prop Inspection</option>
+          <option>Brake Service</option><option>Other</option>
+        </select>
+      </div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Technician / Shop</label><input type="text" class="fi" id="mt-tech" placeholder="e.g. AeroFix MRO"></div>
+        <div class="fg"><label class="fl">Est. Duration</label>
+          <select class="fs" id="mt-duration">
+            <option>2 hrs</option><option>4 hrs</option><option selected>1 day</option>
+            <option>2 days</option><option>3 days</option><option>1 week</option><option>2 weeks</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Priority</label>
+        <select class="fs" id="mt-priority">
+          <option value="low">Low — Can wait</option>
+          <option value="medium" selected>Medium — Schedule Soon</option>
+          <option value="high">High — Urgent</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fta" id="mt-notes" placeholder="Work to be performed..."></textarea></div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('maint-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMaint()">⚙ Save Reservation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SQUAWK -->
+<div class="overlay" id="squawk-modal">
+  <div class="modal" style="width:440px;">
+    <div class="modal-head">
+      <div class="mh-title">Log Squawk</div>
+      <button class="modal-close" onclick="closeModal('squawk-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg"><label class="fl">Discrepancy</label><textarea class="fta" id="sq-desc" placeholder="Describe the defect or discrepancy..."></textarea></div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Priority</label>
+          <select class="fs" id="sq-priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+        </div>
+        <div class="fg"><label class="fl">Reported By</label><input type="text" class="fi" id="sq-reporter" placeholder="Name"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('squawk-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSquawk()">Submit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AIRWORTHINESS -->
+<div class="overlay" id="aw-modal">
+  <div class="modal" style="width:480px;">
+    <div class="modal-head">
+      <div><div class="mh-title">Airworthiness Items</div><div class="mh-sub">Edit, add, or remove items</div></div>
+      <button class="modal-close" onclick="closeModal('aw-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="aw-modal-list" style="margin-bottom:16px;max-height:260px;overflow-y:auto;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">Add New Item</div>
+        <div class="f-row">
+          <div class="fg" style="margin-bottom:0;"><label class="fl">Item Name</label><input type="text" class="fi" id="aw-new-name" placeholder="e.g. Pitot Heat Check"></div>
+          <div class="fg" style="margin-bottom:0;"><label class="fl">Status / Value</label><input type="text" class="fi" id="aw-new-val" placeholder="e.g. Current"></div>
+        </div>
+        <div class="f-row" style="margin-top:10px;">
+          <div class="fg" style="margin-bottom:0;"><label class="fl">Color</label>
+            <select class="fs" id="aw-new-color">
+              <option value="chip-green">Green — OK / Current</option>
+              <option value="chip-blue">Blue — Info</option>
+              <option value="chip-yellow">Yellow — Due Soon</option>
+              <option value="chip-red">Red — Overdue</option>
+              <option value="chip-silver">Silver — N/A</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:0;display:flex;align-items:flex-end;">
+            <button class="btn btn-primary btn-sm" onclick="addAwItem()" style="width:100%;justify-content:center;">Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot"><button class="btn btn-secondary" onclick="closeModal('aw-modal')">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGBOOK ENTRY -->
+<div class="overlay" id="log-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="mh-title" id="log-modal-title">Add Log Entry</div><div class="mh-sub">N353JK Maintenance Record</div></div>
+      <button class="modal-close" onclick="closeModal('log-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="log-edit-idx" value="-1">
+      <div class="f-row">
+        <div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="log-date"></div>
+        <div class="fg"><label class="fl">Tach Hrs at Work</label><input type="text" class="fi" id="log-hrs" placeholder="e.g. 3,388.2"></div>
+      </div>
+      <div class="fg"><label class="fl">Work Performed</label><textarea class="fta" id="log-desc" placeholder="Detailed description..." style="min-height:86px;"></textarea></div>
+      <div class="f-row">
+        <div class="fg"><label class="fl">Part / Reference</label><input type="text" class="fi" id="log-part" placeholder="P/N, AD, SB..."></div>
+        <div class="fg"><label class="fl">Technician / A&P</label><input type="text" class="fi" id="log-tech" placeholder="Name &amp; cert #"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('log-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveLog()">Save Entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFLICT WARNING -->
+<div class="overlay" id="conflict-modal">
+  <div class="modal" style="width:420px;">
+    <div class="modal-head" style="background:rgba(248,113,113,.08);border-bottom-color:rgba(248,113,113,.25);">
+      <div>
+        <div class="mh-title" style="color:var(--red);">⚠ Scheduling Conflict</div>
+        <div class="mh-sub">N353JK is unavailable on this date</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('conflict-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:var(--r);padding:16px 18px;margin-bottom:18px;">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:8px;">Maintenance Scheduled</div>
+        <div style="font-family:var(--head);font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text);" id="conflict-maint-type"></div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-top:5px;" id="conflict-maint-date"></div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);" id="conflict-maint-tech"></div>
+      </div>
+      <p style="font-size:13px;color:var(--text-dim);line-height:1.6;">
+        N353JK cannot be reserved for flight while maintenance is in progress. Please choose a different date or contact the moderator to reschedule maintenance.
+      </p>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeModal('conflict-modal')">Close</button>
+        <button class="btn btn-flight" onclick="closeModal('conflict-modal');document.getElementById('fl-date').value='';document.getElementById('fl-date').focus();">Choose Different Date</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DEFAULTS
+// ══════════════════════════════════════════════════════
+const DEFAULTS = {
+  flights: [],
+  maintenance: [],
+  squawks: [],
+  awItems: [
+    {name:'Annual Inspection', val:'Current',    color:'chip-green'},
+    {name:'100-Hr Inspection', val:'38 hrs out', color:'chip-blue'},
+    {name:'ELT Battery',       val:'Mar 2026',   color:'chip-green'},
+    {name:'VOR Check',         val:'Due Apr 12', color:'chip-yellow'},
+    {name:'Transponder Test',  val:'Jan 2026',   color:'chip-green'},
+  ],
+  logbook: [
+    {date:'2025-03-01',desc:'Engine oil change — AeroShell W100 Plus 4 qts, replaced oil filter',part:'Champion CH48110-1',tech:'R. Morales A&P #123456',hrs:'3,388.2'},
+    {date:'2025-01-15',desc:'Replaced right magneto — timed to spec per Lycoming SI-1286C',part:'Slick 4050',tech:'AeroFix MRO',hrs:'3,371.0'},
+    {date:'2024-11-04',desc:'Annual inspection completed — all systems checked airworthy. Tightened #3 pushrod tube clamp.',part:'N/A',tech:'AeroFix MRO — Dave H. A&P/IA',hrs:'3,340.5'},
+    {date:'2024-09-22',desc:'Carburetor cleaned and adjusted, mixture enriched for altitude',part:'Marvel MA-3-SPA overhaul kit',tech:'R. Morales A&P #123456',hrs:'3,318.0'},
+    {date:'2024-07-09',desc:'Replaced ELT battery pack',part:'Duracell DL-123A × 4',tech:'Desert Sky Aviation',hrs:'3,290.0'},
+    {date:'2024-05-03',desc:'100-hour inspection completed — no discrepancies noted',part:'N/A',tech:'AeroFix MRO',hrs:'3,268.5'},
+    {date:'2024-02-17',desc:'Replaced primer line P-clamp — chafing found during preflight',part:'Cessna P/N S1529-1',tech:'R. Morales A&P #123456',hrs:'3,235.1'},
+  ],
+  stats: [
+    {label:'Tach Hours',    val:'3,412',   unit:'Total',    auto:false, colorClass:''},
+    {label:'Next 100-Hr',  val:'38',       unit:'Hrs Out',  auto:false, colorClass:'blue'},
+    {label:'Annual Due',   val:'Nov 2025', unit:'Expiry',   auto:false, colorClass:'green'},
+    {label:'Flights Booked', val:'auto',   unit:'Upcoming', auto:true,  colorClass:''},
+    {label:'Open Squawks', val:'auto',     unit:'Items',    auto:true,  colorClass:''},
+  ],
+  aircraft: {
+    tail:'N353JK', model:'Cessna 150M — 1975',
+    engine:'Continental O-200-A', power:'100 HP',
+    fuel:'100LL · 26 GAL', seats:'2 — Side by Side',
+    avionics:'Narco MK-12D', home:'KDVT', status:'green',
+  },
+  idCnt: 100,
+};
+
+// ══════════════════════════════════════════════════════
+// STATE — loaded from localStorage or defaults
+// ══════════════════════════════════════════════════════
+const STORE_KEY = 'n353jk_v2';
+let flights, maintenance, squawks, awItems, logbook, stats, aircraft, idCnt;
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (saved) {
+      flights     = saved.flights     || JSON.parse(JSON.stringify(DEFAULTS.flights));
+      maintenance = saved.maintenance || JSON.parse(JSON.stringify(DEFAULTS.maintenance));
+      squawks     = saved.squawks     || JSON.parse(JSON.stringify(DEFAULTS.squawks));
+      awItems     = saved.awItems     || JSON.parse(JSON.stringify(DEFAULTS.awItems));
+      logbook     = saved.logbook     || JSON.parse(JSON.stringify(DEFAULTS.logbook));
+      stats       = saved.stats       || JSON.parse(JSON.stringify(DEFAULTS.stats));
+      aircraft    = saved.aircraft    || JSON.parse(JSON.stringify(DEFAULTS.aircraft));
+      idCnt       = saved.idCnt       || DEFAULTS.idCnt;
+      return;
+    }
+  } catch(e) {}
+  flights     = JSON.parse(JSON.stringify(DEFAULTS.flights));
+  maintenance = JSON.parse(JSON.stringify(DEFAULTS.maintenance));
+  squawks     = JSON.parse(JSON.stringify(DEFAULTS.squawks));
+  awItems     = JSON.parse(JSON.stringify(DEFAULTS.awItems));
+  logbook     = JSON.parse(JSON.stringify(DEFAULTS.logbook));
+  stats       = JSON.parse(JSON.stringify(DEFAULTS.stats));
+  aircraft    = JSON.parse(JSON.stringify(DEFAULTS.aircraft));
+  idCnt       = DEFAULTS.idCnt;
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({flights,maintenance,squawks,awItems,logbook,stats,aircraft,idCnt}));
+  } catch(e) { console.warn('localStorage save failed:', e); }
+}
+
+// ══════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════
+const MOD_PASS = 'N353JK';
+let isMod = false;
+
+function toggleAuth() {
+  if (isMod) { logout(); }
+  else       { openModal('login-modal'); setTimeout(()=>document.getElementById('login-pw').focus(),100); }
+}
+
+function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  const err = document.getElementById('login-err');
+  if (pw === MOD_PASS) {
+    isMod = true;
+    document.body.classList.add('mod');
+    document.getElementById('lock-btn').textContent = '🔓 Mod Active';
+    document.getElementById('lock-btn').classList.add('unlocked');
+    document.getElementById('aw-edit-btn').style.display = 'inline-block';
+    err.style.display = 'none';
+    document.getElementById('login-pw').value = '';
+    closeModal('login-modal');
+    renderDash();
+    toast('Moderator access granted ✓', 'ok');
+  } else {
+    err.style.display = 'block';
+    document.getElementById('login-pw').value = '';
+    document.getElementById('login-pw').focus();
+  }
+}
+
+function logout() {
+  if (!confirm('Exit moderator mode?')) return;
+  isMod = false;
+  document.body.classList.remove('mod');
+  document.getElementById('lock-btn').textContent = '🔒 Mod Login';
+  document.getElementById('lock-btn').classList.remove('unlocked');
+  document.getElementById('aw-edit-btn').style.display = 'none';
+  // redirect to dashboard if on mod-only page
+  const cur = document.querySelector('.page.active');
+  if (cur && (cur.id === 'page-maintenance' || cur.id === 'page-logbook')) showPage('dashboard');
+  toast('Logged out of moderator mode');
+}
+
+// ══════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DSHORT = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+let flightFilter = 'all';
+let calMonth = new Date().getMonth();
+let calYear  = new Date().getFullYear();
+let selectedDate = null;
+
+function showPage(p) {
+  if ((p==='maintenance'||p==='logbook') && !isMod) { toast('Moderator access required','err'); return; }
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const nb = document.getElementById('nav-'+p);
+  if (nb) nb.classList.add('active');
+  if(p==='schedule')    renderCal();
+  if(p==='flights')     renderFlights();
+  if(p==='maintenance') renderMaint();
+  if(p==='logbook')     renderLogbook();
+  if(p==='dashboard')   renderDash();
+}
+
+// ══════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if(id==='aw-modal')    renderAwModalList();
+  if(id==='stats-modal') buildStatsEditRows();
+  if(id==='ac-modal')    populateAcForm();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+
+// ══════════════════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════════════════
+function renderStats() {
+  const today = todayStr();
+  stats.forEach((s,i) => {
+    const lEl = document.getElementById('sl-'+i);
+    const vEl = document.getElementById('sv-'+i);
+    const uEl = document.getElementById('su-'+i);
+    if (!lEl) return;
+    lEl.textContent = s.label;
+    uEl.textContent = s.unit;
+    vEl.className   = 'sb-value' + (s.colorClass ? ' '+s.colorClass : '');
+    if (s.auto && i===3) vEl.textContent = flights.filter(f=>f.date>=today).length;
+    else if (s.auto && i===4) vEl.textContent = squawks.length;
+    else vEl.textContent = s.val;
+  });
+}
+
+function buildStatsEditRows() {
+  const el = document.getElementById('stats-edit-rows');
+  const colorOpts = ['','green','blue','yellow'];
+  const colorLabels = {'':'Default (White)','green':'Green','blue':'Blue','yellow':'Yellow'};
+  el.innerHTML = stats.map((s,i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);align-items:start;">
+      <div>
+        <div class="fl" style="margin-bottom:4px;">Label</div>
+        <input type="text" class="fi" id="se-label-${i}" value="${escHtml(s.label)}" style="font-size:11px;padding:6px 10px;">
+      </div>
+      <div>
+        <div class="fl" style="margin-bottom:4px;">${s.auto?'Value (auto)':'Value'}</div>
+        <input type="text" class="fi" id="se-val-${i}" value="${s.auto?'(auto-computed)':escHtml(s.val)}" ${s.auto?'disabled style="opacity:.4;font-size:11px;padding:6px 10px;"':'style="font-size:11px;padding:6px 10px;"'}>
+      </div>
+      <div>
+        <div class="fl" style="margin-bottom:4px;">Unit</div>
+        <input type="text" class="fi" id="se-unit-${i}" value="${escHtml(s.unit)}" style="font-size:11px;padding:6px 10px;">
+      </div>
+    </div>`).join('');
+}
+
+function saveStats() {
+  stats.forEach((s,i) => {
+    s.label = document.getElementById('se-label-'+i).value.trim() || s.label;
+    s.unit  = document.getElementById('se-unit-'+i).value.trim()  || s.unit;
+    if (!s.auto) {
+      const v = document.getElementById('se-val-'+i).value.trim();
+      if (v) s.val = v;
+    }
+  });
+  saveState();
+  renderStats();
+  closeModal('stats-modal');
+  toast('Stats updated ✓','ok');
+}
+
+// ══════════════════════════════════════════════════════
+// AIRCRAFT DETAILS
+// ══════════════════════════════════════════════════════
+function renderAcCard() {
+  document.getElementById('ac-tail').textContent    = aircraft.tail;
+  document.getElementById('ac-model').textContent   = aircraft.model;
+  document.getElementById('ac-engine').textContent  = aircraft.engine;
+  document.getElementById('ac-power').textContent   = aircraft.power;
+  document.getElementById('ac-fuel').textContent    = aircraft.fuel;
+  document.getElementById('ac-seats').textContent   = aircraft.seats;
+  document.getElementById('ac-avionics').textContent= aircraft.avionics;
+  document.getElementById('ac-home').textContent    = aircraft.home;
+  const sb = document.getElementById('ac-status');
+  const map = {
+    green: {cls:'badge-green', txt:'● Airworthy'},
+    yellow:{cls:'badge-yellow',txt:'⚠ Maintenance Required'},
+    red:   {cls:'badge-red',   txt:'✕ Grounded'},
+  };
+  const s = map[aircraft.status] || map.green;
+  sb.className = 'status-badge '+s.cls;
+  sb.textContent = s.txt;
+  // update nav pill
+  const pip = document.querySelector('.status-pip');
+  const pill = document.querySelector('.status-pill');
+  if (aircraft.status==='green') { pip.style.background=pip.style.boxShadow=''; pill.style.color=''; }
+  else if (aircraft.status==='yellow') { pip.style.background='var(--yellow)'; pip.style.boxShadow='0 0 6px var(--yellow)'; pill.style.color='var(--yellow)'; }
+  else { pip.style.background='var(--red)'; pip.style.boxShadow='0 0 6px var(--red)'; pill.style.color='var(--red)'; }
+}
+
+function populateAcForm() {
+  document.getElementById('ac-f-tail').value    = aircraft.tail;
+  document.getElementById('ac-f-model').value   = aircraft.model;
+  document.getElementById('ac-f-engine').value  = aircraft.engine;
+  document.getElementById('ac-f-power').value   = aircraft.power;
+  document.getElementById('ac-f-fuel').value    = aircraft.fuel;
+  document.getElementById('ac-f-seats').value   = aircraft.seats;
+  document.getElementById('ac-f-avionics').value= aircraft.avionics;
+  document.getElementById('ac-f-home').value    = aircraft.home;
+  document.getElementById('ac-f-status').value  = aircraft.status;
+}
+
+function saveAcDetails() {
+  aircraft.tail     = document.getElementById('ac-f-tail').value.trim()    || aircraft.tail;
+  aircraft.model    = document.getElementById('ac-f-model').value.trim()   || aircraft.model;
+  aircraft.engine   = document.getElementById('ac-f-engine').value.trim()  || aircraft.engine;
+  aircraft.power    = document.getElementById('ac-f-power').value.trim()   || aircraft.power;
+  aircraft.fuel     = document.getElementById('ac-f-fuel').value.trim()    || aircraft.fuel;
+  aircraft.seats    = document.getElementById('ac-f-seats').value.trim()   || aircraft.seats;
+  aircraft.avionics = document.getElementById('ac-f-avionics').value.trim()|| aircraft.avionics;
+  aircraft.home     = document.getElementById('ac-f-home').value.trim()    || aircraft.home;
+  aircraft.status   = document.getElementById('ac-f-status').value;
+  renderAcCard();
+  saveState();
+  closeModal('ac-modal');
+  toast('Aircraft details saved ✓','ok');
+}
+
+// ══════════════════════════════════════════════════════
+// CONFLICT DETECTION
+// ══════════════════════════════════════════════════════
+function maintDateRange(m) {
+  // Returns array of YYYY-MM-DD strings this maintenance occupies
+  const dayCount = {'2 hrs':1,'4 hrs':1,'1 day':1,'2 days':2,'3 days':3,'1 week':7,'2 weeks':14}[m.duration] || 1;
+  const dates = [];
+  const base = new Date(m.date + 'T12:00:00');
+  for (let i = 0; i < dayCount; i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    dates.push(d.toISOString().slice(0,10));
+  }
+  return dates;
+}
+
+function getMaintenanceConflict(flightDate) {
+  for (const m of maintenance) {
+    if (maintDateRange(m).includes(flightDate)) return m;
+  }
+  return null;
+}
+
+function checkFlightDateConflict(date) {
+  const warn = document.getElementById('fl-conflict-warn');
+  if (!date || !warn) return;
+  const conflict = getMaintenanceConflict(date);
+  if (conflict) {
+    warn.style.display = 'block';
+    warn.textContent = `⚠ Unavailable — ${conflict.type} scheduled (${conflict.duration})`;
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// FLIGHTS
+// ══════════════════════════════════════════════════════
+function openFlightModal(idx=-1) {
+  const warn = document.getElementById('fl-conflict-warn');
+  if (warn) warn.style.display = 'none';
+  document.getElementById('fl-edit-idx').value = idx;
+  if (idx>=0) {
+    const f=flights[idx];
+    document.getElementById('fl-date').value=f.date;
+    document.getElementById('fl-time').value=f.time;
+    document.getElementById('fl-pilot').value=f.pilot;
+    document.getElementById('fl-duration').value=f.duration;
+    document.getElementById('fl-type').value=f.type;
+    document.getElementById('fl-dest').value=f.dest;
+    document.getElementById('fl-notes').value=f.notes;
+  } else {
+    ['fl-date','fl-pilot','fl-dest','fl-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('fl-time').value='09:00';
+    document.getElementById('fl-duration').value='2 hrs';
+    document.getElementById('fl-type').value='Local / Pattern';
+  }
+  openModal('flight-modal');
+}
+
+function saveFlight() {
+  const date=document.getElementById('fl-date').value;
+  const pilot=document.getElementById('fl-pilot').value.trim();
+  if(!date){toast('Select a date','err');return;}
+  if(!pilot){toast('Enter pilot name','err');return;}
+
+  // ── maintenance conflict check ──
+  const editIdx = parseInt(document.getElementById('fl-edit-idx').value);
+  const conflict = getMaintenanceConflict(date);
+  if (conflict) {
+    const d = new Date(conflict.date+'T12:00:00');
+    const dateLabel = d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    const days = {'2 hrs':'(same day)','4 hrs':'(same day)','1 day':'(same day)','2 days':'(2 days)','3 days':'(3 days)','1 week':'(1 week)','2 weeks':'(2 weeks)'}[conflict.duration]||'';
+    // populate and open conflict warning modal
+    document.getElementById('conflict-maint-type').textContent = conflict.type;
+    document.getElementById('conflict-maint-date').textContent = dateLabel + ' ' + days;
+    document.getElementById('conflict-maint-tech').textContent = conflict.tech;
+    openModal('conflict-modal');
+    return;
+  }
+
+  const item={id:idCnt++,date,time:document.getElementById('fl-time').value,pilot,
+    duration:document.getElementById('fl-duration').value,type:document.getElementById('fl-type').value,
+    dest:document.getElementById('fl-dest').value||'Local',notes:document.getElementById('fl-notes').value};
+  if(editIdx>=0){flights[editIdx]=item;toast('Flight updated ✓','ok');}
+  else{flights.push(item);toast('Flight reserved ✓','ok');}
+  flights.sort((a,b)=>a.date.localeCompare(b.date));
+  saveState();
+  closeModal('flight-modal');
+  renderFlights(); renderDash();
+  if(document.getElementById('page-schedule').classList.contains('active')) renderCal();
+}
+
+function deleteFlight(idx) {
+  if(!confirm('Delete this flight reservation?'))return;
+  flights.splice(idx,1);
+  saveState();
+  renderFlights(); renderDash();
+  if(document.getElementById('page-schedule').classList.contains('active')) renderCal();
+  toast('Reservation removed');
+}
+
+function setFlightFilter(f,btn) {
+  flightFilter=f;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFlights();
+}
+
+function renderFlights() {
+  const el=document.getElementById('flights-list');
+  const today=todayStr();
+  let list=[...flights];
+  if(flightFilter==='upcoming') list=list.filter(f=>f.date>=today);
+  if(flightFilter==='past')     list=list.filter(f=>f.date<today);
+  if(!list.length){el.innerHTML=`<div class="empty"><div class="empty-icon">✈</div>No flights. Click "New Reservation" to book.</div>`;return;}
+  el.innerHTML=list.map(f=>{
+    const idx=flights.indexOf(f);
+    const isPast=f.date<today;
+    const {mon,day}=dBlock(f.date);
+    return `<div class="event-item" style="opacity:${isPast?'.5':'1'}">
+      <div class="edb"><div class="edb-mon">${mon}</div><div class="edb-day">${day}</div></div>
+      <div class="ev-body">
+        <div class="ev-title">✈ ${f.type}</div>
+        <div class="ev-meta">${f.time} · ${f.duration} · Pilot: ${f.pilot} · ${f.dest}</div>
+        ${f.notes?`<div class="ev-note">${f.notes}</div>`:''}
+        <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;">
+          <span class="chip chip-blue">N353JK</span>
+          ${isPast?'<span class="chip chip-silver">Completed</span>':'<span class="chip chip-green">Upcoming</span>'}
+        </div>
+      </div>
+      <div class="ev-actions">
+        <button class="icon-btn edit" onclick="openFlightModal(${idx})" title="Edit">✎</button>
+        <button class="icon-btn" onclick="deleteFlight(${idx})" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// MAINTENANCE
+// ══════════════════════════════════════════════════════
+function openMaintModal(idx=-1) {
+  if(!isMod){toast('Moderator access required','err');return;}
+  document.getElementById('mt-edit-idx').value=idx;
+  if(idx>=0){
+    const m=maintenance[idx];
+    document.getElementById('mt-date').value=m.date;
+    document.getElementById('mt-time').value=m.time;
+    document.getElementById('mt-type').value=m.type;
+    document.getElementById('mt-tech').value=m.tech;
+    document.getElementById('mt-duration').value=m.duration;
+    document.getElementById('mt-priority').value=m.priority;
+    document.getElementById('mt-notes').value=m.notes;
+  } else {
+    ['mt-date','mt-tech','mt-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('mt-time').value='08:00';
+    document.getElementById('mt-type').value='';
+    document.getElementById('mt-duration').value='1 day';
+    document.getElementById('mt-priority').value='medium';
+  }
+  openModal('maint-modal');
+}
+
+function saveMaint() {
+  const date=document.getElementById('mt-date').value;
+  const type=document.getElementById('mt-type').value;
+  const tech=document.getElementById('mt-tech').value.trim();
+  if(!date){toast('Select a date','err');return;}
+  if(!type){toast('Select a maintenance type','err');return;}
+  if(!tech){toast('Enter technician / shop','err');return;}
+  const item={id:idCnt++,date,time:document.getElementById('mt-time').value,type,tech,
+    duration:document.getElementById('mt-duration').value,priority:document.getElementById('mt-priority').value,
+    notes:document.getElementById('mt-notes').value};
+  const idx=parseInt(document.getElementById('mt-edit-idx').value);
+  if(idx>=0){maintenance[idx]=item;toast('Maintenance updated ✓','ok');}
+  else{maintenance.push(item);toast('Maintenance scheduled ✓','ok');}
+  maintenance.sort((a,b)=>a.date.localeCompare(b.date));
+  saveState();
+  closeModal('maint-modal');
+  renderMaint(); renderDash();
+  if(document.getElementById('page-schedule').classList.contains('active')) renderCal();
+}
+
+function deleteMaint(idx) {
+  if(!confirm('Delete this maintenance reservation?'))return;
+  maintenance.splice(idx,1);
+  saveState();
+  renderMaint(); renderDash();
+  if(document.getElementById('page-schedule').classList.contains('active')) renderCal();
+  toast('Reservation removed');
+}
+
+function renderMaint() {
+  const el=document.getElementById('maint-list');
+  if(!maintenance.length){el.innerHTML=`<div class="empty"><div class="empty-icon">⚙</div>No maintenance scheduled.</div>`;return;}
+  el.innerHTML=maintenance.map((m,i)=>{
+    const {mon,day}=dBlock(m.date);
+    const pb=m.priority==='high'?'var(--red)':m.priority==='medium'?'var(--yellow)':'var(--blue)';
+    const pc=m.priority==='high'?'chip-red':m.priority==='medium'?'chip-yellow':'chip-blue';
+    return `<div class="event-item">
+      <div class="edb"><div class="edb-mon">${mon}</div><div class="edb-day">${day}</div></div>
+      <div class="ev-body">
+        <div class="ev-title" style="border-left:2px solid ${pb};padding-left:8px;">⚙ ${m.type}</div>
+        <div class="ev-meta">${m.time} · ${m.duration} · ${m.tech}</div>
+        ${m.notes?`<div class="ev-note">${m.notes}</div>`:''}
+        <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;">
+          <span class="chip ${pc}">${m.priority} priority</span>
+          <span class="chip chip-silver">N353JK</span>
+        </div>
+      </div>
+      <div class="ev-actions">
+        <button class="icon-btn edit" onclick="openMaintModal(${i})" title="Edit">✎</button>
+        <button class="icon-btn" onclick="deleteMaint(${i})" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// SQUAWKS
+// ══════════════════════════════════════════════════════
+function saveSquawk() {
+  const desc=document.getElementById('sq-desc').value.trim();
+  if(!desc){toast('Enter a description','err');return;}
+  const d=new Date();
+  squawks.unshift({desc,priority:document.getElementById('sq-priority').value,
+    reporter:document.getElementById('sq-reporter').value.trim()||'Unknown',
+    date:d.toLocaleDateString('en-US',{month:'short',day:'numeric'}),status:'Pending'});
+  document.getElementById('sq-desc').value='';
+  document.getElementById('sq-reporter').value='';
+  saveState();
+  closeModal('squawk-modal');
+  renderDash();
+  toast('Squawk logged ✓','ok');
+}
+
+function deleteSquawk(idx) {
+  if(!isMod){toast('Moderator access required','err');return;}
+  if(!confirm('Mark this squawk resolved and remove it?'))return;
+  squawks.splice(idx,1);
+  saveState();
+  renderDash();
+  toast('Squawk resolved ✓','ok');
+}
+
+function renderSquawks() {
+  const tb=document.getElementById('sq-body');
+  if(!tb)return;
+  if(!squawks.length){
+    tb.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--text-muted);font-family:var(--mono);font-size:11px;padding:20px;">No open squawks</td></tr>`;
+    return;
+  }
+  tb.innerHTML=squawks.map((s,i)=>{
+    const pc=s.priority==='high'?'prio-h':s.priority==='medium'?'prio-m':'prio-l';
+    const pl=s.priority.charAt(0).toUpperCase()+s.priority.slice(1);
+    const cc=s.status==='Scheduled'?'chip-yellow':'chip-silver';
+    return `<tr>
+      <td><span class="prio-dot ${pc}"></span>${pl}</td>
+      <td>${s.desc}</td>
+      <td>${s.date} · ${s.reporter}</td>
+      <td><span class="chip ${cc}">${s.status}</span></td>
+      <td class="mod-cell">
+        <button class="icon-btn" onclick="deleteSquawk(${i})" title="Resolve &amp; Remove">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// AIRWORTHINESS
+// ══════════════════════════════════════════════════════
+function renderAwList() {
+  const el=document.getElementById('aw-list');
+  if(!el)return;
+  if(!awItems.length){el.innerHTML=`<div style="color:var(--text-muted);font-family:var(--mono);font-size:11px;padding:10px 0;">No items</div>`;return;}
+  el.innerHTML=awItems.map((a,i)=>`
+    <div class="qi">
+      <span class="qi-label">${a.name}</span>
+      <span class="chip ${a.color}">${a.val}</span>
+    </div>`).join('');
+}
+
+function renderAwModalList() {
+  const el=document.getElementById('aw-modal-list');
+  if(!el)return;
+  if(!awItems.length){el.innerHTML=`<div style="text-align:center;color:var(--text-muted);font-family:var(--mono);font-size:11px;padding:14px 0;">No items. Add one below.</div>`;return;}
+  const cLabels={'chip-green':'Green','chip-blue':'Blue','chip-yellow':'Yellow','chip-red':'Red','chip-silver':'Silver'};
+  el.innerHTML=awItems.map((a,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 90px;gap:6px;">
+        <input type="text" class="fi" value="${escHtml(a.name)}" onchange="awItems[${i}].name=this.value;renderAwList();saveState();" style="font-size:11px;padding:5px 9px;">
+        <input type="text" class="fi" value="${escHtml(a.val)}"  onchange="awItems[${i}].val=this.value;renderAwList();saveState();"  style="font-size:11px;padding:5px 9px;">
+        <select class="fs" onchange="awItems[${i}].color=this.value;renderAwList();saveState();" style="font-size:11px;padding:5px 8px;">
+          ${['chip-green','chip-blue','chip-yellow','chip-red','chip-silver'].map(c=>`<option value="${c}"${a.color===c?' selected':''}>${cLabels[c]}</option>`).join('')}
+        </select>
+      </div>
+      <button class="icon-btn" onclick="awItems.splice(${i},1);saveState();renderAwList();renderAwModalList();" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function addAwItem() {
+  const name=document.getElementById('aw-new-name').value.trim();
+  const val=document.getElementById('aw-new-val').value.trim();
+  if(!name||!val){toast('Enter item name and status','err');return;}
+  awItems.push({name,val,color:document.getElementById('aw-new-color').value});
+  document.getElementById('aw-new-name').value='';
+  document.getElementById('aw-new-val').value='';
+  saveState();
+  renderAwList();
+  renderAwModalList();
+  toast('Item added ✓','ok');
+}
+
+// ══════════════════════════════════════════════════════
+// LOGBOOK
+// ══════════════════════════════════════════════════════
+function openLogModal(idx=-1) {
+  document.getElementById('log-edit-idx').value=idx;
+  const title=document.getElementById('log-modal-title');
+  if(idx>=0){
+    const l=logbook[idx];
+    title.textContent='Edit Log Entry';
+    document.getElementById('log-date').value=l.date;
+    document.getElementById('log-hrs').value=l.hrs;
+    document.getElementById('log-desc').value=l.desc;
+    document.getElementById('log-part').value=l.part;
+    document.getElementById('log-tech').value=l.tech;
+  } else {
+    title.textContent='Add Log Entry';
+    ['log-date','log-hrs','log-desc','log-part','log-tech'].forEach(id=>document.getElementById(id).value='');
+  }
+  openModal('log-modal');
+}
+
+function saveLog() {
+  const date=document.getElementById('log-date').value;
+  const desc=document.getElementById('log-desc').value.trim();
+  if(!date){toast('Select a date','err');return;}
+  if(!desc){toast('Enter work performed','err');return;}
+  const item={date,desc,
+    tech:document.getElementById('log-tech').value.trim()||'—',
+    part:document.getElementById('log-part').value.trim()||'N/A',
+    hrs:document.getElementById('log-hrs').value.trim()||'—'};
+  const idx=parseInt(document.getElementById('log-edit-idx').value);
+  if(idx>=0){logbook[idx]=item;toast('Entry updated ✓','ok');}
+  else{logbook.unshift(item);toast('Entry added ✓','ok');}
+  logbook.sort((a,b)=>b.date.localeCompare(a.date));
+  saveState();
+  closeModal('log-modal');
+  renderLogbook();
+}
+
+function deleteLog(idx) {
+  if(!confirm('Permanently delete this log entry?'))return;
+  logbook.splice(idx,1);
+  saveState();
+  renderLogbook();
+  toast('Entry deleted');
+}
+
+function renderLogbook() {
+  const tb=document.getElementById('log-body');
+  if(!logbook.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);font-family:var(--mono);font-size:11px;padding:24px;">No entries. Click "Add Entry" to start.</td></tr>`;return;}
+  tb.innerHTML=logbook.map((l,i)=>`
+    <tr>
+      <td style="white-space:nowrap;font-family:var(--mono);font-size:11px;color:var(--silver-d);">${l.date}</td>
+      <td style="max-width:300px;color:var(--text);">${l.desc}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted);white-space:nowrap;">${l.part}</td>
+      <td style="font-size:11px;white-space:nowrap;">${l.tech}</td>
+      <td style="font-family:var(--mono);font-size:11px;white-space:nowrap;color:var(--silver-d);">${l.hrs}</td>
+      <td><div style="display:flex;gap:4px;">
+        <button class="icon-btn edit" onclick="openLogModal(${i})" title="Edit">✎</button>
+        <button class="icon-btn" onclick="deleteLog(${i})" title="Delete">✕</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════════════════════
+function renderCal() {
+  document.getElementById('cal-label').textContent=MONTHS[calMonth]+' '+calYear;
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML='';
+  DSHORT.forEach(d=>{const h=document.createElement('div');h.className='cal-hdr';h.textContent=d;grid.appendChild(h);});
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date();
+  for(let i=0;i<firstDay;i++){const e=document.createElement('div');e.className='cal-day empty';grid.appendChild(e);}
+  for(let d=1;d<=dim;d++){
+    const el=document.createElement('div');el.className='cal-day';
+    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+    const isPast=new Date(calYear,calMonth,d)<new Date(today.getFullYear(),today.getMonth(),today.getDate());
+    const hasFl=flights.some(f=>f.date===ds);
+    const hasMt=maintenance.some(m=>m.date===ds);
+    if(isToday) el.classList.add('today');
+    if(isPast&&!isToday) el.classList.add('past');
+    if(selectedDate===ds) el.classList.add('selected');
+    const sp=document.createElement('span');sp.textContent=d;el.appendChild(sp);
+    if(hasFl||hasMt){
+      const dots=document.createElement('div');dots.className='cal-dots';
+      if(hasFl){const dot=document.createElement('div');dot.className='cal-dot dot-flight';dots.appendChild(dot);}
+      if(hasMt){const dot=document.createElement('div');dot.className='cal-dot dot-maint';dots.appendChild(dot);}
+      el.appendChild(dots);
+    }
+    el.onclick=()=>selectDate(ds);
+    grid.appendChild(el);
+  }
+}
+
+function changeMonth(dir) {
+  calMonth+=dir;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  selectedDate=null;
+  document.getElementById('day-detail').innerHTML=`<div class="empty"><div class="empty-icon">📅</div>Select a date</div>`;
+  renderCal();
+}
+
+function selectDate(ds) {
+  selectedDate=ds;
+  renderCal();
+  const fEvs=flights.filter(f=>f.date===ds);
+  const mEvs=maintenance.filter(m=>m.date===ds);
+  const d=new Date(ds+'T12:00:00');
+  const lbl=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  let html=`<div style="font-family:var(--mono);font-size:10px;color:var(--silver-d);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">${lbl}</div>`;
+  if(!fEvs.length&&!mEvs.length) html+=`<div style="text-align:center;padding:14px 0;color:var(--text-muted);font-family:var(--mono);font-size:11px;">No events</div>`;
+  fEvs.forEach(f=>{html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-left:2px solid var(--blue);border-radius:var(--r);padding:10px 12px;margin-bottom:7px;">
+    <div style="font-family:var(--head);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--blue);">✈ ${f.type}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:3px;">${f.time} · ${f.duration} · ${f.pilot}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">→ ${f.dest}</div></div>`;});
+  mEvs.forEach(m=>{const bc=m.priority==='high'?'var(--red)':m.priority==='medium'?'var(--yellow)':'var(--blue)';
+    html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-left:2px solid ${bc};border-radius:var(--r);padding:10px 12px;margin-bottom:7px;">
+    <div style="font-family:var(--head);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">⚙ ${m.type}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:3px;">${m.time} · ${m.duration} · ${m.tech}</div></div>`;});
+  document.getElementById('day-detail').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+function renderDash() {
+  renderStats();
+  renderAcCard();
+  renderSquawks();
+  renderAwList();
+  renderDashUpcoming();
+}
+
+function renderDashUpcoming() {
+  const el=document.getElementById('dash-upcoming');
+  if(!el)return;
+  const today=todayStr();
+  const all=[
+    ...flights.filter(f=>f.date>=today).map(f=>({...f,kind:'flight'})),
+    ...maintenance.filter(m=>m.date>=today).map(m=>({...m,kind:'maint'})),
+  ].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+  if(!all.length){el.innerHTML=`<div style="color:var(--text-muted);font-family:var(--mono);font-size:11px;padding:10px 0;">No upcoming events</div>`;return;}
+  el.innerHTML=all.map(ev=>{
+    const {mon,day}=dBlock(ev.date);
+    const icon=ev.kind==='flight'?'✈':'⚙';
+    const bc=ev.kind==='flight'?'var(--blue)':'var(--yellow)';
+    const sub=ev.kind==='flight'?`${ev.time} · ${ev.pilot}`:`${ev.time} · ${ev.tech}`;
+    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div class="edb" style="min-width:38px;padding:4px;"><div class="edb-mon" style="font-size:8px;">${mon}</div><div class="edb-day" style="font-size:17px;">${day}</div></div>
+      <div style="flex:1;">
+        <div style="font-family:var(--head);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;border-left:2px solid ${bc};padding-left:6px;color:var(--silver);">${icon} ${ev.type}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:2px;">${sub}</div>
+      </div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function dBlock(ds){const d=new Date(ds+'T12:00:00');return{mon:d.toLocaleDateString('en-US',{month:'short'}).toUpperCase(),day:d.getDate()};}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(type?' '+type:'');
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+loadState();
+renderDash();
+</script>
+</body>
+</html>
